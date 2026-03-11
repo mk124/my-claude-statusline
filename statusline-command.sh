@@ -112,6 +112,7 @@ usage_bar() {
   elif [ "$v" -ge 50 ] 2>/dev/null; then color="$YELLOW"; dcolor="$DYELLOW"
   else color="$GREEN"; dcolor="$DGREEN"; fi
   local filled=$((v / 10))
+  [ "$filled" -gt 10 ] && filled=10
   local proj="" proj_filled=0
   local suffix=""
   if [ "$stale" != "1" ] && [ -n "$reset_secs" ] && [ -n "$window" ]; then
