@@ -36,7 +36,7 @@ refresh() {
         "$USAGE_API_URL" > "$CACHE.tmp" \
         && jq -e '.five_hour and .seven_day' "$CACHE.tmp" >/dev/null 2>&1 \
         && mv "$CACHE.tmp" "$CACHE" \
-        || rm -f "$CACHE.tmp"
+        || { rm -f "$CACHE.tmp"; touch "$CACHE" 2>/dev/null; }
     fi
     rmdir "$LOCK" 2>/dev/null
   ) &
