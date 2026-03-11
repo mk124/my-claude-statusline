@@ -3,6 +3,8 @@
 # Outputs JSON: {"session":N,"weekly":N} or {} on failure
 # Multi-instance safe with lock + atomic write
 
+CC_VERSION="${1:-unknown}"
+
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 CONFIG="$SCRIPT_DIR/usage-config.json"
 
@@ -32,7 +34,7 @@ refresh() {
       curl -s --max-time 5 \
         -H "Authorization: Bearer $TOKEN" \
         -H "anthropic-beta: oauth-2025-04-20" \
-        -H "User-Agent: claude-code/$(claude --version 2>/dev/null | awk '{print $1}' || echo 'unknown')" \
+        -H "User-Agent: claude-code/${CC_VERSION}" \
         "$USAGE_API_URL" > "$CACHE.tmp" \
         && jq -e '.five_hour and .seven_day' "$CACHE.tmp" >/dev/null 2>&1 \
         && mv "$CACHE.tmp" "$CACHE" \

@@ -3,6 +3,7 @@ input=$(cat)
 
 MODEL=$(echo "$input" | jq -r '.model.display_name')
 DIR=$(echo "$input" | jq -r '.workspace.current_dir')
+BRANCH=$(git -C "$DIR" branch --show-current 2>/dev/null)
 PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
 
 # Tokens
@@ -18,8 +19,9 @@ ADDED=$(echo "$input" | jq -r '.cost.total_lines_added // empty')
 REMOVED=$(echo "$input" | jq -r '.cost.total_lines_removed // empty')
 
 # Usage quota (from external script)
+VERSION=$(echo "$input" | jq -r '.version // empty')
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-USAGE_JSON=$(bash "$SCRIPT_DIR/usage-fetch.sh" 2>/dev/null)
+USAGE_JSON=$(bash "$SCRIPT_DIR/usage-fetch.sh" "$VERSION" 2>/dev/null)
 SESSION_PCT=$(echo "$USAGE_JSON" | jq -r '.session // empty' 2>/dev/null)
 WEEKLY_PCT=$(echo "$USAGE_JSON" | jq -r '.weekly // empty' 2>/dev/null)
 S_RESET_SECS=$(echo "$USAGE_JSON" | jq -r '.s_reset // empty' 2>/dev/null)
@@ -27,7 +29,7 @@ W_RESET_SECS=$(echo "$USAGE_JSON" | jq -r '.w_reset // empty' 2>/dev/null)
 CACHE_AGE=$(echo "$USAGE_JSON" | jq -r '.cache_age // empty' 2>/dev/null)
 
 # Colors
-CYAN='\033[36m'; GREEN='\033[32m'; YELLOW='\033[33m'; RED='\033[31m'; DIM='\033[2m'; RESET='\033[0m'
+CYAN='\033[36m'; GREEN='\033[32m'; YELLOW='\033[33m'; RED='\033[31m'; MAGENTA='\033[35m'; DIM='\033[2m'; RESET='\033[0m'
 DGREEN='\033[38;5;22m'; DYELLOW='\033[38;5;94m'; DRED='\033[38;5;52m'
 
 # Context bar color
@@ -84,6 +86,7 @@ LINES=""
 
 # Assemble single line
 OUT="${CYAN}[${MODEL}]${RESET} ${DIR##*/}"
+[ -n "$BRANCH" ] && OUT="$OUT ${DIM}(${RESET}${MAGENTA}${BRANCH}${RESET}${DIM})${RESET}"
 OUT="$OUT ${DIM}|${RESET} ${BAR_COLOR}${BAR_F}${RESET}${BAR_COLOR}${DIM}${BAR_E}${RESET} ${PCT}%"
 
 # Format seconds to human-readable remaining time
