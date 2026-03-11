@@ -1,0 +1,4 @@
+{
+  "cache_ttl": 120,
+  "usage_api_url": "https://api.anthropic.com/api/oauth/usage"
+}
