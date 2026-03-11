@@ -25,6 +25,12 @@ needs_refresh() {
   return 1
 }
 
+# Remove stale lock (subshell crash/kill)
+if [ -d "$LOCK" ]; then
+  lock_age=$(( $(date +%s) - $(file_mtime "$LOCK") ))
+  [ "$lock_age" -gt 120 ] && rmdir "$LOCK" 2>/dev/null
+fi
+
 refresh() {
   mkdir "$LOCK" 2>/dev/null || return
   (
