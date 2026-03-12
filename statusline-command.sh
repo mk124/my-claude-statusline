@@ -71,8 +71,8 @@ fmt_sec() {
 
 # Build tokens segment
 TOKENS=""
-[ -n "$IN_TOKENS" ] && TOKENS="IN $(fmt_tokens "$IN_TOKENS")"
-[ -n "$OUT_TOKENS" ] && TOKENS="${TOKENS:+$TOKENS }OUT $(fmt_tokens "$OUT_TOKENS")"
+[ -n "$IN_TOKENS" ] && TOKENS="⇡$(fmt_tokens "$IN_TOKENS")"
+[ -n "$OUT_TOKENS" ] && TOKENS="${TOKENS:+$TOKENS }⇣$(fmt_tokens "$OUT_TOKENS")"
 
 # Build duration segment
 DURATION=""
