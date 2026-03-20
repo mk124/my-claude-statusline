@@ -6,8 +6,8 @@ CONF="$HOME/.claude/usage-config.json"
 BAR_ROUND=5
 if [ -f "$CONF" ]; then
   jq -e '.bar_round == false' "$CONF" >/dev/null 2>&1 && BAR_ROUND=0
-  SESSION_MIN_PROJ_ELAPSED=$(jq -r '.session_min_proj_elapsed // 1800' "$CONF")
-  WEEKLY_MIN_PROJ_ELAPSED=$(jq -r '.weekly_min_proj_elapsed // 86400' "$CONF")
+  SESSION_MIN_PROJ_ELAPSED=$(jq -r '.session_min_proj_elapsed // 1800' "$CONF" 2>/dev/null || echo 1800)
+  WEEKLY_MIN_PROJ_ELAPSED=$(jq -r '.weekly_min_proj_elapsed // 86400' "$CONF" 2>/dev/null || echo 86400)
 else
   SESSION_MIN_PROJ_ELAPSED=1800
   WEEKLY_MIN_PROJ_ELAPSED=86400
