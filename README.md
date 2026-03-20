@@ -38,6 +38,7 @@ Add to `~/.claude/settings.json`:
 |-----|---------|-------------|
 | `cache_ttl` | `120` | Cache refresh interval (seconds) |
 | `usage_api_url` | `https://api.anthropic.com/api/oauth/usage` | API endpoint |
+| `bar_round` | `true` | Round progress bar segments instead of truncating |
 
 ## Notes
 

@@ -1,6 +1,13 @@
 #!/bin/bash
 input=$(cat)
 
+# Config
+CONF="$HOME/.claude/usage-config.json"
+BAR_ROUND=5
+if [ -f "$CONF" ] && jq -e '.bar_round == false' "$CONF" >/dev/null 2>&1; then
+  BAR_ROUND=0
+fi
+
 MODEL=$(echo "$input" | jq -r '.model.display_name')
 DIR=$(echo "$input" | jq -r '.workspace.current_dir')
 BRANCH=$(git -C "$DIR" branch --show-current 2>/dev/null)
@@ -38,7 +45,7 @@ elif [ "$PCT" -ge 70 ]; then BAR_COLOR="$YELLOW"
 else BAR_COLOR="$GREEN"; fi
 
 # Progress bar
-FILLED=$((PCT / 10)); EMPTY=$((10 - FILLED))
+FILLED=$(( (PCT + BAR_ROUND) / 10 )); EMPTY=$((10 - FILLED))
 BAR_F=$(printf "%${FILLED}s" | tr ' ' '█')
 BAR_E=$(printf "%${EMPTY}s" | tr ' ' '░')
 
@@ -111,7 +118,7 @@ usage_bar() {
   elif [ "$v" -ge 80 ] 2>/dev/null; then color="$RED"; dcolor="$DRED"
   elif [ "$v" -ge 50 ] 2>/dev/null; then color="$YELLOW"; dcolor="$DYELLOW"
   else color="$GREEN"; dcolor="$DGREEN"; fi
-  local filled=$((v / 10))
+  local filled=$(( (v + BAR_ROUND) / 10 ))
   [ "$filled" -gt 10 ] && filled=10
   local proj="" proj_filled=0
   local suffix=""
@@ -119,7 +126,7 @@ usage_bar() {
     local elapsed=$((window - reset_secs))
     if [ "$elapsed" -gt 300 ] && [ "$v" -gt 0 ]; then
       proj=$((v * window / elapsed))
-      proj_filled=$((proj / 10))
+      proj_filled=$(( (proj + BAR_ROUND) / 10 ))
       [ "$proj_filled" -gt 10 ] && proj_filled=10
     fi
     suffix=" ${DIM}$(fmt_remaining "$reset_secs")"
