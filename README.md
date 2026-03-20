@@ -39,6 +39,8 @@ Add to `~/.claude/settings.json`:
 | `cache_ttl` | `120` | Cache refresh interval (seconds) |
 | `usage_api_url` | `https://api.anthropic.com/api/oauth/usage` | API endpoint |
 | `bar_round` | `true` | Round progress bar segments instead of truncating |
+| `session_min_proj_elapsed` | `1800` | Minimum elapsed seconds for session projection (default: 30 min) |
+| `weekly_min_proj_elapsed` | `86400` | Minimum elapsed seconds for weekly projection (default: 24 hrs) |
 
 ## Notes
 

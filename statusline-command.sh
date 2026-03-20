@@ -4,8 +4,13 @@ input=$(cat)
 # Config
 CONF="$HOME/.claude/usage-config.json"
 BAR_ROUND=5
-if [ -f "$CONF" ] && jq -e '.bar_round == false' "$CONF" >/dev/null 2>&1; then
-  BAR_ROUND=0
+if [ -f "$CONF" ]; then
+  jq -e '.bar_round == false' "$CONF" >/dev/null 2>&1 && BAR_ROUND=0
+  SESSION_MIN_PROJ_ELAPSED=$(jq -r '.session_min_proj_elapsed // 1800' "$CONF")
+  WEEKLY_MIN_PROJ_ELAPSED=$(jq -r '.weekly_min_proj_elapsed // 86400' "$CONF")
+else
+  SESSION_MIN_PROJ_ELAPSED=1800
+  WEEKLY_MIN_PROJ_ELAPSED=86400
 fi
 
 MODEL=$(echo "$input" | jq -r '.model.display_name')
@@ -111,7 +116,7 @@ fmt_remaining() {
 
 # Usage quota segment
 usage_bar() {
-  local v=$1 label=$2 reset_secs=$3 window=$4 stale=$5
+  local v=$1 label=$2 reset_secs=$3 window=$4 stale=$5 min_proj_elapsed=$6
   local color dcolor
   if [ "$stale" = "1" ]; then
     color="$DIM"; dcolor="$DIM"
@@ -124,8 +129,10 @@ usage_bar() {
   local suffix=""
   if [ "$stale" != "1" ] && [ -n "$reset_secs" ] && [ -n "$window" ]; then
     local elapsed=$((window - reset_secs))
+    local eff_elapsed=$elapsed
+    [ "$eff_elapsed" -lt "$min_proj_elapsed" ] && eff_elapsed=$min_proj_elapsed
     if [ "$elapsed" -gt 300 ] && [ "$v" -gt 0 ]; then
-      proj=$((v * window / elapsed))
+      proj=$((v * window / eff_elapsed))
       proj_filled=$(( (proj + BAR_ROUND) / 10 ))
       [ "$proj_filled" -gt 10 ] && proj_filled=10
     fi
@@ -152,8 +159,8 @@ usage_bar() {
 USAGE_STALE=0
 [ -n "$CACHE_AGE" ] && [ "$CACHE_AGE" -gt 600 ] 2>/dev/null && USAGE_STALE=1
 if [ -n "$SESSION_PCT" ] && [ -n "$WEEKLY_PCT" ]; then
-  SESSION_USAGE_BAR=$(usage_bar "$SESSION_PCT" "S" "$S_RESET_SECS" 18000 "$USAGE_STALE")
-  WEEKLY_USAGE_BAR=$(usage_bar "$WEEKLY_PCT" "W" "$W_RESET_SECS" 604800 "$USAGE_STALE")
+  SESSION_USAGE_BAR=$(usage_bar "$SESSION_PCT" "S" "$S_RESET_SECS" 18000 "$USAGE_STALE" "$SESSION_MIN_PROJ_ELAPSED")
+  WEEKLY_USAGE_BAR=$(usage_bar "$WEEKLY_PCT" "W" "$W_RESET_SECS" 604800 "$USAGE_STALE" "$WEEKLY_MIN_PROJ_ELAPSED")
   STALE_TAG=""
   [ "$USAGE_STALE" = "1" ] && STALE_TAG=" ${DIM}($(fmt_remaining "$CACHE_AGE") ago)${RESET}"
   OUT="$OUT ${DIM}|${RESET} ${SESSION_USAGE_BAR} ${DIM}|${RESET} ${WEEKLY_USAGE_BAR}${STALE_TAG}"

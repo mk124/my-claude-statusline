@@ -1,5 +1,7 @@
 {
   "cache_ttl": 120,
   "usage_api_url": "https://api.anthropic.com/api/oauth/usage",
-  "bar_round": true
+  "bar_round": true,
+  "session_min_proj_elapsed": 1800,
+  "weekly_min_proj_elapsed": 86400
 }
