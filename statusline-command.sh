@@ -2,7 +2,7 @@
 input=$(cat)
 
 # Config
-CONF="$HOME/.claude/usage-config.json"
+CONF="$HOME/.claude/statusline-config.json"
 BAR_ROUND=5
 if [ -f "$CONF" ]; then
   jq -e '.bar_round == false' "$CONF" >/dev/null 2>&1 && BAR_ROUND=0
@@ -30,15 +30,14 @@ API_MS=$(echo "$input" | jq -r '.cost.total_api_duration_ms // empty')
 ADDED=$(echo "$input" | jq -r '.cost.total_lines_added // empty')
 REMOVED=$(echo "$input" | jq -r '.cost.total_lines_removed // empty')
 
-# Usage quota (from external script)
-VERSION=$(echo "$input" | jq -r '.version // empty')
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-USAGE_JSON=$(bash "$SCRIPT_DIR/usage-fetch.sh" "$VERSION" 2>/dev/null)
-SESSION_PCT=$(echo "$USAGE_JSON" | jq -r '.session // empty' 2>/dev/null)
-WEEKLY_PCT=$(echo "$USAGE_JSON" | jq -r '.weekly // empty' 2>/dev/null)
-S_RESET_SECS=$(echo "$USAGE_JSON" | jq -r '.s_reset // empty' 2>/dev/null)
-W_RESET_SECS=$(echo "$USAGE_JSON" | jq -r '.w_reset // empty' 2>/dev/null)
-CACHE_AGE=$(echo "$USAGE_JSON" | jq -r '.cache_age // empty' 2>/dev/null)
+# Usage quota (from native rate_limits)
+NOW=$(date +%s)
+SESSION_PCT=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' | cut -d. -f1)
+WEEKLY_PCT=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty' | cut -d. -f1)
+S_RESET_AT=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty' | cut -d. -f1)
+W_RESET_AT=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty' | cut -d. -f1)
+S_RESET_SECS=""; [ -n "$S_RESET_AT" ] && { s=$((S_RESET_AT - NOW)); [ "$s" -lt 0 ] && s=0; S_RESET_SECS=$s; }
+W_RESET_SECS=""; [ -n "$W_RESET_AT" ] && { s=$((W_RESET_AT - NOW)); [ "$s" -lt 0 ] && s=0; W_RESET_SECS=$s; }
 
 # Colors
 CYAN='\033[36m'; GREEN='\033[32m'; YELLOW='\033[33m'; RED='\033[31m'; MAGENTA='\033[35m'; DIM='\033[2m'; RESET='\033[0m'
@@ -116,18 +115,16 @@ fmt_remaining() {
 
 # Usage quota segment
 usage_bar() {
-  local v=$1 label=$2 reset_secs=$3 window=$4 stale=$5 min_proj_elapsed=$6
+  local v=$1 label=$2 reset_secs=$3 window=$4 min_proj_elapsed=$5
   local color dcolor
-  if [ "$stale" = "1" ]; then
-    color="$DIM"; dcolor="$DIM"
-  elif [ "$v" -ge 80 ] 2>/dev/null; then color="$RED"; dcolor="$DRED"
+  if [ "$v" -ge 80 ] 2>/dev/null; then color="$RED"; dcolor="$DRED"
   elif [ "$v" -ge 50 ] 2>/dev/null; then color="$YELLOW"; dcolor="$DYELLOW"
   else color="$GREEN"; dcolor="$DGREEN"; fi
   local filled=$(( (v + BAR_ROUND) / 10 ))
   [ "$filled" -gt 10 ] && filled=10
   local proj="" proj_filled=0
   local suffix=""
-  if [ "$stale" != "1" ] && [ -n "$reset_secs" ] && [ -n "$window" ]; then
+  if [ -n "$reset_secs" ] && [ -n "$window" ]; then
     local elapsed=$((window - reset_secs))
     local eff_elapsed=$elapsed
     [ "$eff_elapsed" -lt "$min_proj_elapsed" ] && eff_elapsed=$min_proj_elapsed
@@ -156,15 +153,8 @@ usage_bar() {
   local bar_e=$(printf "%${empty}s" | tr ' ' '░')
   printf '%b' "${label} ${color}${bar_f}${RESET}${dcolor}${bar_p}${RESET}${color}${DIM}${bar_e}${RESET} ${v}%${suffix}"
 }
-USAGE_STALE=0
-[ -n "$CACHE_AGE" ] && [ "$CACHE_AGE" -gt 600 ] 2>/dev/null && USAGE_STALE=1
-if [ -n "$SESSION_PCT" ] && [ -n "$WEEKLY_PCT" ]; then
-  SESSION_USAGE_BAR=$(usage_bar "$SESSION_PCT" "S" "$S_RESET_SECS" 18000 "$USAGE_STALE" "$SESSION_MIN_PROJ_ELAPSED")
-  WEEKLY_USAGE_BAR=$(usage_bar "$WEEKLY_PCT" "W" "$W_RESET_SECS" 604800 "$USAGE_STALE" "$WEEKLY_MIN_PROJ_ELAPSED")
-  STALE_TAG=""
-  [ "$USAGE_STALE" = "1" ] && STALE_TAG=" ${DIM}($(fmt_remaining "$CACHE_AGE") ago)${RESET}"
-  OUT="$OUT ${DIM}|${RESET} ${SESSION_USAGE_BAR} ${DIM}|${RESET} ${WEEKLY_USAGE_BAR}${STALE_TAG}"
-fi
+[ -n "$SESSION_PCT" ] && OUT="$OUT ${DIM}|${RESET} $(usage_bar "$SESSION_PCT" "S" "$S_RESET_SECS" 18000 "$SESSION_MIN_PROJ_ELAPSED")"
+[ -n "$WEEKLY_PCT" ] && OUT="$OUT ${DIM}|${RESET} $(usage_bar "$WEEKLY_PCT" "W" "$W_RESET_SECS" 604800 "$WEEKLY_MIN_PROJ_ELAPSED")"
 
 [ -n "$TOKENS" ] && OUT="$OUT ${DIM}|${RESET} ${TOKENS}"
 [ -n "$DURATION" ] && OUT="$OUT ${DIM}|${RESET} ${DURATION}"

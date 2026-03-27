@@ -11,20 +11,20 @@ My custom Claude Code statusline — shows usage quota with projected usage, con
 - `S` / `W` — session (5h) and weekly (7d) usage with reset countdown and projected usage at reset
 - `█▒░` — three-level bar: current (bright) → projected (dark) → empty (dim)
 - Colors shift green → yellow → red as usage increases; projection turns red when exceeding 100%
-- Stale cache (>10min) dims the usage bars and shows `(Xh ago)`
 
 ## Setup
 
 ```bash
-cp statusline-command.sh usage-fetch.sh usage-config.json ~/.claude/
-chmod +x ~/.claude/statusline-command.sh ~/.claude/usage-fetch.sh
+cp statusline-command.sh statusline-config.json ~/.claude/
+chmod +x ~/.claude/statusline-command.sh
 ```
 
 Add to `~/.claude/settings.json`:
 
 ```json
 {
-  "statusline": {
+  "statusLine": {
+    "type": "command",
     "command": "~/.claude/statusline-command.sh"
   }
 }
@@ -32,18 +32,15 @@ Add to `~/.claude/settings.json`:
 
 ## Config
 
-`usage-config.json`:
+`statusline-config.json`:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `cache_ttl` | `120` | Cache refresh interval (seconds) |
-| `usage_api_url` | `https://api.anthropic.com/api/oauth/usage` | API endpoint |
 | `bar_round` | `true` | Round progress bar segments instead of truncating |
 | `session_min_proj_elapsed` | `1800` | Minimum elapsed seconds for session projection (default: 30 min) |
 | `weekly_min_proj_elapsed` | `86400` | Minimum elapsed seconds for weekly projection (default: 24 hrs) |
 
 ## Notes
 
-- macOS only (reads OAuth token from Keychain)
-- Requires `jq` and `curl`
-- Cache is shared across Claude Code instances with atomic locking
+- Requires `jq`; `git` is optional (branch name won't display without it)
+- Usage quota (S/W bars) requires Claude Code >= 2.1.80 and Claude.ai Pro/Max subscription
