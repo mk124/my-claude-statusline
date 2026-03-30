@@ -5,11 +5,14 @@ My custom Claude Code statusline — shows usage quota with projected usage, con
 ## What it looks like
 
 ```
-[Opus] myproject | ██░░░░░░░░ 25% | S █▒▒░░░░░░░ 10% 3h6m→26% | W ██▒░░░░░░░ 20% 2d12h→31% | ⇡12.3k ⇣4.5k | 15.2s (API 8.3s) | +10 -3
+[Opus] myproject | ██░░░░░░░░ 25% | S ██│▒░░░░░░ 10% 3h6m→26% | W ██▒░░░░░░░ 20% 2d12h→31% | ⇡12.3k ⇣4.5k | 15.2s (API 8.3s) | +10 -3
 ```
 
 - `S` / `W` — session (5h) and weekly (7d) usage with reset countdown and projected usage at reset
 - `█▒░` — three-level bar: current (bright) → projected (dark) → empty (dim)
+- `│` — pace indicator: shows where usage should be based on elapsed time
+  - Cyan when usage is at or below pace, red when usage exceeds pace
+  - Background color matches the underlying bar segment
 - Colors shift green → yellow → red as usage increases; projection turns red when exceeding 100%
 
 ## Setup
@@ -37,6 +40,7 @@ Add to `~/.claude/settings.json`:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `bar_round` | `true` | Round progress bar segments instead of truncating |
+| `pace_indicator` | `true` | Show pace indicator (`│`) on usage bars |
 | `session_min_proj_elapsed` | `1800` | Minimum elapsed seconds for session projection (default: 30 min) |
 | `weekly_min_proj_elapsed` | `86400` | Minimum elapsed seconds for weekly projection (default: 24 hrs) |
 

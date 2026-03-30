@@ -1,5 +1,6 @@
 {
   "bar_round": true,
+  "pace_indicator": true,
   "session_min_proj_elapsed": 1800,
   "weekly_min_proj_elapsed": 86400
 }

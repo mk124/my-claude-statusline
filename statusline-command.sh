@@ -4,8 +4,10 @@ input=$(cat)
 # Config
 CONF="$HOME/.claude/statusline-config.json"
 BAR_ROUND=5
+PACE_INDICATOR=1
 if [ -f "$CONF" ]; then
   jq -e '.bar_round == false' "$CONF" >/dev/null 2>&1 && BAR_ROUND=0
+  jq -e '.pace_indicator == false' "$CONF" >/dev/null 2>&1 && PACE_INDICATOR=0
   SESSION_MIN_PROJ_ELAPSED=$(jq -r '.session_min_proj_elapsed // 1800' "$CONF" 2>/dev/null || echo 1800)
   WEEKLY_MIN_PROJ_ELAPSED=$(jq -r '.weekly_min_proj_elapsed // 86400' "$CONF" 2>/dev/null || echo 86400)
 else
@@ -40,8 +42,10 @@ S_RESET_SECS=""; [ -n "$S_RESET_AT" ] && { s=$((S_RESET_AT - NOW)); [ "$s" -lt 0
 W_RESET_SECS=""; [ -n "$W_RESET_AT" ] && { s=$((W_RESET_AT - NOW)); [ "$s" -lt 0 ] && s=0; W_RESET_SECS=$s; }
 
 # Colors
-CYAN='\033[36m'; GREEN='\033[32m'; YELLOW='\033[33m'; RED='\033[31m'; MAGENTA='\033[35m'; DIM='\033[2m'; RESET='\033[0m'
+CYAN='\033[36m'; GREEN='\033[38;5;2m'; YELLOW='\033[38;5;3m'; RED='\033[38;5;1m'; MAGENTA='\033[35m'; DIM='\033[2m'; RESET='\033[0m'
 DGREEN='\033[38;5;22m'; DYELLOW='\033[38;5;94m'; DRED='\033[38;5;52m'
+BGREEN='\033[48;5;10m'; BYELLOW='\033[48;5;184m'; BRED='\033[48;5;196m'
+LCYAN='\033[96m'; LRED='\033[91m'
 
 # Context bar color
 if [ "$PCT" -ge 90 ]; then BAR_COLOR="$RED"
@@ -124,6 +128,7 @@ usage_bar() {
   [ "$filled" -gt 10 ] && filled=10
   local proj="" proj_filled=0
   local suffix=""
+  local pace_pos=-1 pace_over=0
   if [ -n "$reset_secs" ] && [ -n "$window" ]; then
     local elapsed=$((window - reset_secs))
     local eff_elapsed=$elapsed
@@ -132,6 +137,13 @@ usage_bar() {
       proj=$((v * window / eff_elapsed))
       proj_filled=$(( (proj + BAR_ROUND) / 10 ))
       [ "$proj_filled" -gt 10 ] && proj_filled=10
+    fi
+    # Pace indicator position
+    if [ "$PACE_INDICATOR" -eq 1 ] 2>/dev/null; then
+      local elapsed_pct=$((elapsed * 100 / window))
+      pace_pos=$((elapsed * 10 / window))
+      [ "$pace_pos" -ge 10 ] && pace_pos=-1
+      [ "$v" -gt "$elapsed_pct" ] && pace_over=1
     fi
     suffix=" ${DIM}$(fmt_remaining "$reset_secs")"
     if [ -n "$proj" ]; then
@@ -144,14 +156,44 @@ usage_bar() {
     fi
     suffix="${suffix}${RESET}"
   fi
-  # Bar: █ current | ▒ projected | ░ empty
+  # Bar: █ current | ▒ projected | ░ empty | │ pace
   local proj_extra=0
   [ "$proj_filled" -gt "$filled" ] && proj_extra=$((proj_filled - filled))
   local empty=$((10 - filled - proj_extra))
-  local bar_f=$(printf "%${filled}s" | tr ' ' '█')
-  local bar_p=$(printf "%${proj_extra}s" | tr ' ' '▒')
-  local bar_e=$(printf "%${empty}s" | tr ' ' '░')
-  printf '%b' "${label} ${color}${bar_f}${RESET}${dcolor}${bar_p}${RESET}${color}${DIM}${bar_e}${RESET} ${v}%${suffix}"
+  local bar="" i
+  for ((i=0; i<filled; i++)); do bar="${bar}F"; done
+  for ((i=0; i<proj_extra; i++)); do bar="${bar}P"; done
+  for ((i=0; i<empty; i++)); do bar="${bar}E"; done
+  # Inject pace marker
+  if [ "$pace_pos" -ge 0 ] && [ "$pace_pos" -lt 10 ]; then
+    bar="${bar:0:$pace_pos}X${bar:$((pace_pos + 1))}"
+  fi
+  # Background colors for pace marker
+  local bgF bgP pcolor
+  if [ "$v" -ge 80 ] 2>/dev/null; then bgF="$BRED"; bgP='\033[48;5;52m'
+  elif [ "$v" -ge 50 ] 2>/dev/null; then bgF="$BYELLOW"; bgP='\033[48;5;58m'
+  else bgF="$BGREEN"; bgP='\033[48;5;22m'; fi
+  if [ "$pace_over" -eq 1 ]; then pcolor="$LRED"; else pcolor="$LCYAN"; fi
+  # Render bar character by character
+  local colored_bar=""
+  for ((i=0; i<10; i++)); do
+    local ch="${bar:$i:1}"
+    case "$ch" in
+      F) colored_bar="${colored_bar}${color}█${RESET}" ;;
+      P) colored_bar="${colored_bar}${dcolor}▒${RESET}" ;;
+      E) colored_bar="${colored_bar}${color}${DIM}░${RESET}" ;;
+      X)
+        if [ "$i" -lt "$filled" ]; then
+          colored_bar="${colored_bar}${pcolor}${bgF}│${RESET}"
+        elif [ "$i" -lt $((filled + proj_extra)) ]; then
+          colored_bar="${colored_bar}${pcolor}${bgP}│${RESET}"
+        else
+          colored_bar="${colored_bar}${pcolor}│${RESET}"
+        fi
+        ;;
+    esac
+  done
+  printf '%b' "${label} ${colored_bar} ${v}%${suffix}"
 }
 [ -n "$SESSION_PCT" ] && OUT="$OUT ${DIM}|${RESET} $(usage_bar "$SESSION_PCT" "S" "$S_RESET_SECS" 18000 "$SESSION_MIN_PROJ_ELAPSED")"
 [ -n "$WEEKLY_PCT" ] && OUT="$OUT ${DIM}|${RESET} $(usage_bar "$WEEKLY_PCT" "W" "$W_RESET_SECS" 604800 "$WEEKLY_MIN_PROJ_ELAPSED")"
