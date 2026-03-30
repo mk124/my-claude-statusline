@@ -5,7 +5,7 @@ My custom Claude Code statusline — shows usage quota with projected usage, con
 ## What it looks like
 
 ```
-[Opus] myproject | ██░░░░░░░░ 25% | S ██│▒░░░░░░ 10% 3h6m→26% | W ██▒░░░░░░░ 20% 2d12h→31% | ⇡12.3k ⇣4.5k | 15.2s (API 8.3s) | +10 -3
+[Opus] myproject | ██░░░░░░░░ 25% | S █▒▒│░░░░░░ 10% 3h6m→26% | W ██▒░░░│░░░ 20% 2d12h→31% | ⇡12.3k ⇣4.5k | 15.2s (API 8.3s) | +10 -3
 ```
 
 - `S` / `W` — session (5h) and weekly (7d) usage with reset countdown and projected usage at reset
